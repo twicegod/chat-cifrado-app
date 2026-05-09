@@ -10,6 +10,10 @@ on:
       - 'v*'
   workflow_dispatch: # tambien permite correrlo manualmente desde la UI de GitHub
 
+# Permisos necesarios para crear Releases publicos
+permissions:
+  contents: write
+
 jobs:
   build:
     name: Compilar APK release
