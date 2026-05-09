@@ -1,5 +1,7 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../services/chat_service.dart';
+import '../services/local_db_service.dart';
 import 'chat_screen.dart';
 
 class ContactsScreen extends StatefulWidget {
@@ -11,6 +13,34 @@ class ContactsScreen extends StatefulWidget {
 
 class _ContactsScreenState extends State<ContactsScreen> {
   final _service = ChatService();
+  Map<String, String> _lastMessages = {};
+  StreamSubscription? _msgSub;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadLastMessages();
+    // Refrescar cuando llegue un mensaje nuevo o se sincronice el historial
+    _msgSub = _service.messages.listen((data) {
+      if (data['tipo'] == 'mensaje' || data['tipo'] == 'historial_synced') {
+        _loadLastMessages();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _msgSub?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _loadLastMessages() async {
+    final me = _service.username;
+    if (me == null) return;
+    final last = await LocalDbService().getLastMessagePerContact(me);
+    if (!mounted) return;
+    setState(() => _lastMessages = last);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -129,9 +159,16 @@ class _ContactsScreenState extends State<ContactsScreen> {
                       ),
                     ),
                     title: Text(user, style: const TextStyle(fontWeight: FontWeight.w600)),
-                    subtitle: const Text(
-                      'online',
-                      style: TextStyle(color: Color(0xFF25D366), fontSize: 12),
+                    subtitle: Text(
+                      _lastMessages[user] ?? 'online',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: _lastMessages.containsKey(user)
+                            ? Colors.grey[600]
+                            : const Color(0xFF25D366),
+                        fontSize: 13,
+                      ),
                     ),
                     trailing: count > 0
                         ? CircleAvatar(

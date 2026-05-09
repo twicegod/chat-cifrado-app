@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
 import 'package:web_socket_channel/web_socket_channel.dart';
+import 'local_db_service.dart';
 
 class ChatService {
   static final ChatService _instance = ChatService._internal();
@@ -42,6 +43,8 @@ class ChatService {
     serverIp = ip;
     _intentionalDisconnect = false;
     _reconnectAttempts = 0;
+    // Inicializar la DB local en paralelo (no bloquea la conexion)
+    LocalDbService().init();
     _doConnect();
   }
 
@@ -75,8 +78,23 @@ class ChatService {
             currentUsers = lista.where((u) => u != username).toList();
             _usersController.add(currentUsers);
 
+          } else if (msg['tipo'] == 'historial') {
+            // Sincronizamos el historial completo en la DB local
+            final mensajes = (msg['mensajes'] as List?) ?? [];
+            LocalDbService().syncHistorial(mensajes).then((_) {
+              // Notificamos a las pantallas que el historial se actualizo
+              _messageController.add({'tipo': 'historial_synced'});
+            });
+
           } else if (msg['tipo'] == 'mensaje') {
             final from = msg['de'] as String;
+            // Guardar en DB local
+            LocalDbService().saveReceivedMessage(
+              serverId: msg['id'] as int?,
+              de: from,
+              para: username ?? '',
+              texto: msg['texto'] as String,
+            );
             unreadCounts[from] = (unreadCounts[from] ?? 0) + 1;
             _unreadController.add(Map.from(unreadCounts));
             _messageController.add(msg);
@@ -131,6 +149,14 @@ class ChatService {
 
   void send(String to, String text) {
     _channel?.sink.add(jsonEncode({'para': to, 'texto': text}));
+    // Tambien lo guardamos en la DB local para que persista offline
+    if (username != null) {
+      LocalDbService().saveSentMessage(
+        de: username!,
+        para: to,
+        texto: text,
+      );
+    }
   }
 
   /// Pide al servidor la lista actualizada de usuarios conectados.
@@ -144,13 +170,17 @@ class ChatService {
   }
 
   /// Desconexion intencional (logout). Cancela los reintentos.
-  void disconnect() {
+  /// Por defecto borra el cache local; pasa clearCache=false para conservarlo.
+  Future<void> disconnect({bool clearCache = true}) async {
     _intentionalDisconnect = true;
     _reconnectTimer?.cancel();
     _channel?.sink.close();
     _channel = null;
     _isConnected = false;
     _statusController.add(false);
+    if (clearCache) {
+      await LocalDbService().clearAll();
+    }
     username = null;
     serverIp = null;
     unreadCounts.clear();

@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import '../models/message.dart';
 import '../services/chat_service.dart';
+import '../services/local_db_service.dart';
 
 class ChatScreen extends StatefulWidget {
   final String contactName;
@@ -21,6 +22,7 @@ class _ChatScreenState extends State<ChatScreen> {
   @override
   void initState() {
     super.initState();
+    _loadHistorialLocal();
     _sub = _service.messages.listen((data) {
       if (data['tipo'] == 'mensaje' && data['de'] == widget.contactName) {
         setState(() {
@@ -32,12 +34,37 @@ class _ChatScreenState extends State<ChatScreen> {
           ));
         });
         _scrollToBottom();
+      } else if (data['tipo'] == 'historial_synced') {
+        // El servidor mando historial nuevo, recargamos desde la DB local
+        _loadHistorialLocal();
       } else if (data['tipo'] == 'error') {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(data['texto'] as String)),
         );
       }
     });
+  }
+
+  /// Carga el historial guardado localmente para esta conversacion.
+  Future<void> _loadHistorialLocal() async {
+    final me = _service.username;
+    if (me == null) return;
+
+    final rows = await LocalDbService().getConversation(me, widget.contactName);
+    if (!mounted) return;
+
+    setState(() {
+      _messages.clear();
+      for (final r in rows) {
+        _messages.add(Message(
+          from: r['de'] as String,
+          text: r['texto'] as String,
+          isMe: r['de'] == me,
+          time: DateTime.tryParse(r['fecha'] as String? ?? '') ?? DateTime.now(),
+        ));
+      }
+    });
+    _scrollToBottom();
   }
 
   @override
