@@ -22,9 +22,34 @@ class _ContactsScreenState extends State<ContactsScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text('Chat Cifrado', style: TextStyle(color: Colors.white, fontSize: 18)),
-            Text(
-              _service.username ?? '',
-              style: const TextStyle(color: Colors.white70, fontSize: 12),
+            // Indicador de estado de conexion
+            StreamBuilder<bool>(
+              stream: _service.connectionStatus,
+              initialData: _service.isConnected,
+              builder: (context, snap) {
+                final connected = snap.data ?? false;
+                return Row(
+                  children: [
+                    Container(
+                      width: 8,
+                      height: 8,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: connected
+                            ? const Color(0xFF25D366) // verde
+                            : Colors.orangeAccent,    // naranja reconectando
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      connected
+                          ? '${_service.username ?? ''} - online'
+                          : 'reconectando...',
+                      style: const TextStyle(color: Colors.white70, fontSize: 12),
+                    ),
+                  ],
+                );
+              },
             ),
           ],
         ),
