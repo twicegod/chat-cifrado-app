@@ -1,0 +1,4 @@
+flutter pub get
+PS C:\proyectos_flutter\chat_cifrado\chat_cifrado_app> flutter pub get 
+
+PS C:\proyectos_flutter\chat_cifrado\chat_cifrado_app> flutter run -d chrome
