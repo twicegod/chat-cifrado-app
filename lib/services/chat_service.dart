@@ -34,7 +34,11 @@ class ChatService {
       (data) {
         final msg = jsonDecode(data as String) as Map<String, dynamic>;
 
-        if (msg['tipo'] == 'usuarios') {
+        if (msg['tipo'] == 'ping') {
+          // Heartbeat: el servidor pregunta si seguimos vivos -> respondemos pong
+          _channel?.sink.add(jsonEncode({'tipo': 'pong'}));
+
+        } else if (msg['tipo'] == 'usuarios') {
           // Lista de usuarios actualizada por el servidor
           final lista = List<String>.from(msg['lista'] as List);
           currentUsers = lista.where((u) => u != username).toList();
@@ -56,6 +60,12 @@ class ChatService {
 
   void send(String to, String text) {
     _channel?.sink.add(jsonEncode({'para': to, 'texto': text}));
+  }
+
+  /// Pide al servidor la lista actualizada de usuarios conectados.
+  /// Lo usa el boton de refresh manual.
+  void requestUsersRefresh() {
+    _channel?.sink.add(jsonEncode({'tipo': 'get_users'}));
   }
 
   void clearUnread(String contact) {

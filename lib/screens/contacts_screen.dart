@@ -30,7 +30,21 @@ class _ContactsScreenState extends State<ContactsScreen> {
         ),
         actions: [
           IconButton(
+            icon: const Icon(Icons.refresh, color: Colors.white),
+            tooltip: 'Actualizar lista',
+            onPressed: () {
+              _service.requestUsersRefresh();
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Actualizando lista de contactos...'),
+                  duration: Duration(milliseconds: 800),
+                ),
+              );
+            },
+          ),
+          IconButton(
             icon: const Icon(Icons.logout, color: Colors.white),
+            tooltip: 'Cerrar sesion',
             onPressed: () {
               _service.disconnect();
               Navigator.pushReplacementNamed(context, '/');
