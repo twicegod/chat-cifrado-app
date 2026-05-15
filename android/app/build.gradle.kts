@@ -6,7 +6,7 @@ plugins {
 }
 
 android {
-    namespace = "com.example.chat_cifrado_app"
+    namespace = "com.twicegod.chatcifrado"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -22,7 +22,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.example.chat_cifrado_app"
+        applicationId = "com.twicegod.chatcifrado"
         minSdk = 21
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode

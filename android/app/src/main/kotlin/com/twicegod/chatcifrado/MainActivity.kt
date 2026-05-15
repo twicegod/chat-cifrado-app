@@ -1,5 +1,6 @@
-package com.example.chat_cifrado_app
+package com.twicegod.chatcifrado
 
 import io.flutter.embedding.android.FlutterActivity
 
 class MainActivity : FlutterActivity()
+
