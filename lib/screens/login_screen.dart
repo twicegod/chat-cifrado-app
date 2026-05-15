@@ -87,24 +87,29 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget build(BuildContext context) {
     // Mientras chequeamos si hay login guardado mostramos splash
     if (_checkingAutoLogin) {
-      return const Scaffold(
-        backgroundColor: Color(0xFF075E54),
+      return Scaffold(
+        backgroundColor: const Color(0xFF075E54),
         body: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.lock, color: Colors.white, size: 72),
-              SizedBox(height: 16),
-              Text(
+              Image.asset('assets/icon/splash.png', width: 140, height: 140),
+              const SizedBox(height: 20),
+              const Text(
                 'Chat Cifrado',
                 style: TextStyle(
                   color: Colors.white,
-                  fontSize: 28,
+                  fontSize: 30,
                   fontWeight: FontWeight.bold,
+                  letterSpacing: 0.5,
                 ),
               ),
-              SizedBox(height: 24),
-              CircularProgressIndicator(color: Colors.white),
+              const SizedBox(height: 30),
+              const SizedBox(
+                width: 32,
+                height: 32,
+                child: CircularProgressIndicator(color: Colors.white, strokeWidth: 3),
+              ),
             ],
           ),
         ),
@@ -120,7 +125,7 @@ class _LoginScreenState extends State<LoginScreen> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(Icons.lock, color: Colors.white, size: 72),
+                Image.asset('assets/icon/splash.png', width: 100, height: 100),
                 const SizedBox(height: 16),
                 const Text(
                   'Chat Cifrado',
