@@ -22,6 +22,9 @@ class _ChatScreenState extends State<ChatScreen> {
   @override
   void initState() {
     super.initState();
+    // Marcamos esta conversacion como "activa" para que el service no dispare
+    // notificaciones de mensajes de este contacto mientras la estamos viendo.
+    _service.activeChatContact = widget.contactName;
     _loadHistorialLocal();
     _sub = _service.messages.listen((data) {
       if (data['tipo'] == 'mensaje' && data['de'] == widget.contactName) {
@@ -70,6 +73,10 @@ class _ChatScreenState extends State<ChatScreen> {
   @override
   void dispose() {
     _sub?.cancel();
+    // Al salir de la conversacion, ya no es la activa
+    if (_service.activeChatContact == widget.contactName) {
+      _service.activeChatContact = null;
+    }
     _textController.dispose();
     _scrollController.dispose();
     super.dispose();

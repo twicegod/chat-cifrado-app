@@ -1,8 +1,11 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
+import 'package:flutter/widgets.dart' show AppLifecycleState;
 import 'package:web_socket_channel/web_socket_channel.dart';
 import 'local_db_service.dart';
+import 'notification_service.dart';
+import 'prefs_service.dart';
 
 class ChatService {
   static final ChatService _instance = ChatService._internal();
@@ -19,6 +22,16 @@ class ChatService {
   bool _intentionalDisconnect = false; // true cuando el usuario hace logout
   bool _isConnected = false;
   bool get isConnected => _isConnected;
+
+  // Ciclo de vida de la app: lo seteamos desde main.dart
+  bool _appInForeground = true;
+  void setAppLifecycleState(AppLifecycleState state) {
+    _appInForeground = state == AppLifecycleState.resumed;
+  }
+
+  // El usuario que esta activo en una chat screen. Sirve para no notificar
+  // mensajes del contacto que ya esta mirando.
+  String? activeChatContact;
 
   // Stream del estado de conexion (lo escucha el AppBar para mostrar indicador)
   final _statusController = StreamController<bool>.broadcast();
@@ -88,16 +101,26 @@ class ChatService {
 
           } else if (msg['tipo'] == 'mensaje') {
             final from = msg['de'] as String;
+            final texto = msg['texto'] as String;
             // Guardar en DB local
             LocalDbService().saveReceivedMessage(
               serverId: msg['id'] as int?,
               de: from,
               para: username ?? '',
-              texto: msg['texto'] as String,
+              texto: texto,
             );
             unreadCounts[from] = (unreadCounts[from] ?? 0) + 1;
             _unreadController.add(Map.from(unreadCounts));
             _messageController.add(msg);
+
+            // Notificacion local si:
+            //   - la app NO esta en foreground, O
+            //   - el usuario esta en otra pantalla / otro chat
+            final viendoEstaConversacion =
+                _appInForeground && activeChatContact == from;
+            if (!viendoEstaConversacion) {
+              NotificationService().showMessage(from: from, text: texto);
+            }
 
           } else {
             _messageController.add(msg);
@@ -170,7 +193,7 @@ class ChatService {
   }
 
   /// Desconexion intencional (logout). Cancela los reintentos.
-  /// Por defecto borra el cache local; pasa clearCache=false para conservarlo.
+  /// Por defecto borra el cache local y el login guardado.
   Future<void> disconnect({bool clearCache = true}) async {
     _intentionalDisconnect = true;
     _reconnectTimer?.cancel();
@@ -180,7 +203,9 @@ class ChatService {
     _statusController.add(false);
     if (clearCache) {
       await LocalDbService().clearAll();
+      await PrefsService.clearLogin();
     }
+    await NotificationService().cancelAll();
     username = null;
     serverIp = null;
     unreadCounts.clear();

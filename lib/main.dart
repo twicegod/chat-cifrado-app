@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'screens/login_screen.dart';
 import 'services/chat_service.dart';
+import 'services/notification_service.dart';
 
 void main() {
   runApp(const ChatApp());
@@ -17,8 +18,9 @@ class _ChatAppState extends State<ChatApp> with WidgetsBindingObserver {
   @override
   void initState() {
     super.initState();
-    // Suscribirse a eventos del ciclo de vida (background, foreground, etc.)
     WidgetsBinding.instance.addObserver(this);
+    // Inicializar el sistema de notificaciones locales
+    NotificationService().init();
   }
 
   @override
@@ -31,8 +33,11 @@ class _ChatAppState extends State<ChatApp> with WidgetsBindingObserver {
   void didChangeAppLifecycleState(AppLifecycleState state) {
     super.didChangeAppLifecycleState(state);
 
-    // Cuando la app vuelve a foreground (el usuario desbloquea el celular o
-    // vuelve desde otra app), forzamos reconexion al servidor.
+    // Informamos al servicio para que sepa si la app esta visible o no
+    // (lo necesita para decidir si disparar notificaciones).
+    ChatService().setAppLifecycleState(state);
+
+    // Cuando la app vuelve a foreground forzamos reconexion
     if (state == AppLifecycleState.resumed) {
       ChatService().forceReconnect();
     }

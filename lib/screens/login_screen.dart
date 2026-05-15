@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/chat_service.dart';
+import '../services/prefs_service.dart';
 import '../utils/platform_utils.dart';
 import 'contacts_screen.dart';
 
@@ -16,7 +17,39 @@ class _LoginScreenState extends State<LoginScreen> {
     text: getServerIp(), // funciona en web Y en Android
   );
   bool _loading = false;
+  bool _checkingAutoLogin = true;
   String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _tryAutoLogin();
+  }
+
+  /// Intenta auto-login si hay credenciales guardadas.
+  /// Si encuentra, conecta y va directo a ContactsScreen.
+  Future<void> _tryAutoLogin() async {
+    final saved = await PrefsService.loadLogin();
+    if (!mounted) return;
+
+    if (saved == null) {
+      setState(() => _checkingAutoLogin = false);
+      return;
+    }
+
+    // Prellenar campos por si falla la conexion
+    _ipController.text = saved.ip;
+    _nameController.text = saved.name;
+
+    // Conectar automaticamente y navegar
+    ChatService().connect(saved.ip, saved.name);
+    await Future.delayed(const Duration(milliseconds: 400));
+    if (!mounted) return;
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (_) => const ContactsScreen()),
+    );
+  }
 
   Future<void> _connect() async {
     final name = _nameController.text.trim();
@@ -34,6 +67,8 @@ class _LoginScreenState extends State<LoginScreen> {
 
     try {
       ChatService().connect(ip, name);
+      // Guardamos para proximas aperturas
+      await PrefsService.saveLogin(ip, name);
       await Future.delayed(const Duration(milliseconds: 600));
       if (!mounted) return;
       Navigator.pushReplacement(
@@ -50,6 +85,32 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Mientras chequeamos si hay login guardado mostramos splash
+    if (_checkingAutoLogin) {
+      return const Scaffold(
+        backgroundColor: Color(0xFF075E54),
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.lock, color: Colors.white, size: 72),
+              SizedBox(height: 16),
+              Text(
+                'Chat Cifrado',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 28,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              SizedBox(height: 24),
+              CircularProgressIndicator(color: Colors.white),
+            ],
+          ),
+        ),
+      );
+    }
+
     return Scaffold(
       backgroundColor: const Color(0xFF075E54),
       body: SafeArea(

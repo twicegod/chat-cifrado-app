@@ -1,7 +1,10 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <uses-permission android:name="android.permission.INTERNET"/>
+    <!-- Permisos para notificaciones locales (Android 13+) -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+    <uses-permission android:name="android.permission.VIBRATE"/>
     <application
-        android:label="chat_cifrado_app"
+        android:label="Chat Cifrado"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity
