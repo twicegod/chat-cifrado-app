@@ -50,6 +50,14 @@ class ChatService {
   final _unreadController = StreamController<Map<String, int>>.broadcast();
   Stream<Map<String, int>> get unreadStream => _unreadController.stream;
 
+  // Indicador "escribiendo": mapa de usuarios que estan tipeando y cuando
+  // mandaron su ultimo evento. Se limpia automaticamente despues de 3.5s.
+  final Map<String, DateTime> _typingUsers = {};
+  final _typingController = StreamController<Map<String, DateTime>>.broadcast();
+  Stream<Map<String, DateTime>> get typingStream => _typingController.stream;
+  Map<String, DateTime> get typingUsers => Map.from(_typingUsers);
+  DateTime? _lastTypingSent;
+
   /// Conexion inicial (llamada desde la pantalla de login).
   void connect(String ip, String name) {
     username = name;
@@ -90,6 +98,20 @@ class ChatService {
             final lista = List<String>.from(msg['lista'] as List);
             currentUsers = lista.where((u) => u != username).toList();
             _usersController.add(currentUsers);
+
+          } else if (msg['tipo'] == 'escribiendo') {
+            final from = msg['de'] as String;
+            _typingUsers[from] = DateTime.now();
+            _typingController.add(Map.from(_typingUsers));
+            // Auto-limpiar despues de 3.5s si no llega un evento nuevo
+            Timer(const Duration(milliseconds: 3500), () {
+              final last = _typingUsers[from];
+              if (last != null &&
+                  DateTime.now().difference(last).inMilliseconds >= 3000) {
+                _typingUsers.remove(from);
+                _typingController.add(Map.from(_typingUsers));
+              }
+            });
 
           } else if (msg['tipo'] == 'historial') {
             // Sincronizamos el historial completo en la DB local
@@ -185,6 +207,18 @@ class ChatService {
   /// Pide al servidor la lista actualizada de usuarios conectados.
   void requestUsersRefresh() {
     _channel?.sink.add(jsonEncode({'tipo': 'get_users'}));
+  }
+
+  /// Notifica al destinatario que estamos escribiendo.
+  /// Throttle: envia como maximo un evento cada 2 segundos para no saturar.
+  void sendTyping(String to) {
+    final now = DateTime.now();
+    if (_lastTypingSent != null &&
+        now.difference(_lastTypingSent!).inSeconds < 2) {
+      return;
+    }
+    _lastTypingSent = now;
+    _channel?.sink.add(jsonEncode({'tipo': 'escribiendo', 'para': to}));
   }
 
   void clearUnread(String contact) {

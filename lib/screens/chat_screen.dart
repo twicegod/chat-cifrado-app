@@ -26,6 +26,8 @@ class _ChatScreenState extends State<ChatScreen> {
     // notificaciones de mensajes de este contacto mientras la estamos viendo.
     _service.activeChatContact = widget.contactName;
     _loadHistorialLocal();
+    // Avisar al destinatario que estamos tipeando (con throttle interno).
+    _textController.addListener(_onTextChanged);
     _sub = _service.messages.listen((data) {
       if (data['tipo'] == 'mensaje' && data['de'] == widget.contactName) {
         setState(() {
@@ -70,9 +72,16 @@ class _ChatScreenState extends State<ChatScreen> {
     _scrollToBottom();
   }
 
+  void _onTextChanged() {
+    if (_textController.text.isNotEmpty) {
+      _service.sendTyping(widget.contactName);
+    }
+  }
+
   @override
   void dispose() {
     _sub?.cancel();
+    _textController.removeListener(_onTextChanged);
     // Al salir de la conversacion, ya no es la activa
     if (_service.activeChatContact == widget.contactName) {
       _service.activeChatContact = null;
@@ -135,9 +144,22 @@ class _ChatScreenState extends State<ChatScreen> {
                   widget.contactName,
                   style: const TextStyle(color: Colors.white, fontSize: 16),
                 ),
-                const Text(
-                  'online',
-                  style: TextStyle(color: Color(0xFF25D366), fontSize: 12),
+                StreamBuilder<Map<String, DateTime>>(
+                  stream: _service.typingStream,
+                  initialData: _service.typingUsers,
+                  builder: (context, snap) {
+                    final tipeando = (snap.data ?? {}).containsKey(widget.contactName);
+                    return Text(
+                      tipeando ? 'escribiendo...' : 'online',
+                      style: TextStyle(
+                        color: tipeando
+                            ? Colors.white70
+                            : const Color(0xFF25D366),
+                        fontSize: 12,
+                        fontStyle: tipeando ? FontStyle.italic : FontStyle.normal,
+                      ),
+                    );
+                  },
                 ),
               ],
             ),
