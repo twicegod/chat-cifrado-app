@@ -41,6 +41,23 @@ jobs:
       - name: Instalar dependencias
         run: flutter pub get
 
+      - name: Configurar keystore para firmar el APK
+        if: ${{ secrets.KEYSTORE_BASE64 != '' }}
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          echo "$KEYSTORE_BASE64" | base64 --decode > android/app/chat_cifrado.jks
+          cat > android/key.properties <<EOF
+          storeFile=chat_cifrado.jks
+          storePassword=$KEYSTORE_PASSWORD
+          keyAlias=$KEY_ALIAS
+          keyPassword=$KEY_PASSWORD
+          EOF
+          echo "Keystore configurado (firma persistente activa)"
+
       - name: Analizar codigo
         run: flutter analyze --no-fatal-infos --no-fatal-warnings
         continue-on-error: true

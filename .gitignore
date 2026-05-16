@@ -43,3 +43,8 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Keystore (firma persistente) - NUNCA subir al repo!
+/android/key.properties
+**/*.jks
+**/*.keystore
